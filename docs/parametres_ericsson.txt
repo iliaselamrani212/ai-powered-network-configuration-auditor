@@ -1,0 +1,160 @@
+====================================================================
+BASE DE CONNAISSANCES VERIFIEE - PARAMETRES ERICSSON
+====================================================================
+Sources : Ericsson "LTE Gold Standard E-UTRAN L14A"
+          Ericsson "RAN Parameter Recommendation" (Ericsson AB 2019)
+Chaque fiche est verifiee et reformulee pour le RAG (couche 3).
+Le nom du parametre est repete dans la description pour ameliorer
+la recherche semantique.
+====================================================================
+
+
+### PARAMETRE hoSuccLevel ###
+Objet : EUtranCellRelation (relation de voisinage 4G / LTE)
+
+Le parametre hoSuccLevel represente le niveau de succes des handovers
+vers une cellule voisine. hoSuccLevel prend trois niveaux : HIGH,
+MEDIUM et LOW, selon le taux de reussite des handovers observes vers
+ce voisin.
+
+Fonctionnement de hoSuccLevel : la valeur change automatiquement entre
+HIGH, MEDIUM et LOW en fonction de seuils controles par la fonction
+ANR (Automatic Neighbour Relation) :
+- probCellDetectMedHoSuccThres controle le passage HIGH <-> MEDIUM.
+- probCellDetectLowHoSuccThres controle le passage MEDIUM <-> LOW.
+- probCellDetectLowHoSuccTime est le temps d'observation avant
+  changement de niveau.
+hoSuccLevel n'est applicable que si AnrFunction::problematicCellPolicy
+est regle sur AUTO_DETECT ou AUTO_DETECT_AND_BAR.
+
+Valeur normale de hoSuccLevel : niveau HIGH (les handovers vers ce
+voisin reussissent bien). Dans un reseau sain, la majorite des voisins
+a la meme valeur de hoSuccLevel.
+
+Interpretation en audit : un hoSuccLevel different de la majorite
+(MEDIUM ou LOW) signale une cellule voisine vers laquelle les handovers
+echouent plus souvent. C'est un candidat "cellule problematique" au
+sens de l'ANR. Impact : appels coupes, mauvaise mobilite, degradation
+de la qualite de service vers ce voisin.
+
+
+### PARAMETRE mobilityStatus (mobilityStatus.available) ###
+Objet : EUtranCellRelation (relation de voisinage 4G / LTE)
+
+Le parametre mobilityStatus decrit le statut de disponibilite de la
+relation de voisinage pour la mobilite (handover). Le sous-champ
+mobilityStatus.available indique si le voisin est joignable pour un
+handover.
+
+Valeur normale de mobilityStatus.available : true (le voisin est
+disponible pour la mobilite).
+
+Interpretation en audit : mobilityStatus.available = false signale une
+cellule voisine marquee INDISPONIBLE pour le handover, alors que la
+majorite des voisins est disponible. Impact : les handovers vers cette
+cellule ne peuvent pas se faire, ce qui degrade la continuite de
+service en bordure de cellule (risque de coupure d'appel).
+
+
+### PARAMETRE coverageIndicator ###
+Objet : EUtranCellRelation (4G) / UtranCellRelation (3G) /
+        GeranCellRelation (2G)
+
+Le parametre coverageIndicator est un indicateur de couverture de la
+relation de voisinage. coverageIndicator marque si la cellule voisine
+joue un role de couverture particulier dans les decisions de mobilite
+(par exemple une cellule assurant une couverture etendue).
+
+Valeur normale de coverageIndicator : valeur homogene sur l'ensemble
+des voisins d'une meme cellule ; dans les donnees observees, la
+majorite est a 0.
+
+Interpretation en audit : un coverageIndicator different de la majorite
+(par exemple 1 au lieu de 0) marque un voisin traite differemment pour
+la couverture. Cela peut etre volontaire (cellule de couverture dediee)
+OU une incoherence de configuration. A confirmer avec la documentation
+ou l'ingenieur reseau.
+
+
+### PARAMETRE isHoAllowed ###
+Objet : EUtranCellRelation / UtranCellRelation / GeranCellRelation
+
+Le parametre isHoAllowed indique si le handover est autorise vers cette
+cellule voisine. isHoAllowed est configurable par la fonction ANR
+(feature FGA13 : reglages configurables par marche pour isHoAllowed et
+isRemoveAllowed). isHoAllowed est initialement regle sur "true" quand
+une relation ANR est creee.
+
+Valeur normale de isHoAllowed : true (le handover vers ce voisin est
+permis).
+
+Interpretation en audit : isHoAllowed = false desactive le handover
+vers ce voisin. Pour des relations non desirees, ce reglage sert
+justement a bloquer le handover. Mais un isHoAllowed = false inattendu,
+sur un voisin cense etre actif, est une anomalie grave : le handover
+est impossible, la cellule voisine est isolee.
+
+Remarque detection : isHoAllowed est souvent constant dans un fichier
+(tous les voisins a true). La detection statistique ne le repere alors
+pas ; une regle de conformite comparant a la valeur de reference true
+est necessaire en complement.
+
+
+### PARAMETRE isRemoveAllowed ###
+Objet : EUtranCellRelation / UtranCellRelation / GeranCellRelation
+
+Le parametre isRemoveAllowed indique si la fonction ANR est autorisee a
+supprimer automatiquement cette relation de voisinage. isRemoveAllowed
+est initialement regle sur "true" quand une relation ANR est creee. Il
+ne restreint pas la suppression manuelle par l'operateur.
+
+Valeur normale de isRemoveAllowed : depend de la politique de
+l'operateur ; souvent true pour laisser l'ANR gerer, false pour
+proteger une relation critique.
+
+Interpretation en audit : un isRemoveAllowed different de la majorite
+peut indiquer une relation protegee manuellement ou un reglage oublie.
+
+
+### PARAMETRE lbBnrAllowed ###
+Objet : EUtranCellRelation (4G)
+
+Le parametre lbBnrAllowed autorise l'equilibrage de charge base sur les
+relations de voisinage (BNR = Based on Neighbour Relations) vers ce
+voisin.
+
+Valeur normale de lbBnrAllowed : valeur homogene sur les voisins (true
+ou false selon la strategie de l'operateur).
+
+Interpretation en audit : un lbBnrAllowed deviant signale un voisin
+traite differemment pour le load balancing ; a verifier si volontaire.
+
+
+### PARAMETRE loadBalancing ###
+Objet : EUtranCellRelation (4G)
+
+Le parametre loadBalancing definit le mode ou le niveau d'equilibrage
+de charge applique a cette relation de voisinage.
+
+Interpretation en audit : une valeur de loadBalancing atypique signale
+un voisin avec une strategie de delestage differente des autres.
+
+
+### PARAMETRE coverageIndicator 2G / GeranCellRelation ###
+Objet : GeranCellRelation (relation de voisinage 2G / GERAN)
+
+Pour une relation de voisinage 2G (GeranCellRelation), le parametre
+coverageIndicator marque le role de couverture de la cellule 2G
+voisine. La majorite des voisins 2G a coverageIndicator = 0.
+
+Interpretation en audit : un coverageIndicator = 1 sur un voisin 2G,
+alors que les autres sont a 0, distingue ce voisin comme cellule de
+couverture particuliere. A confirmer : reglage volontaire ou
+incoherence.
+
+
+### NOTE POINTEURS (ne pas auditer statistiquement) ###
+Les parametres adjacentCell et extGeranCellRef ne sont PAS des reglages
+mais des pointeurs (references DN) vers la cellule voisine cible. Ils
+servent a IDENTIFIER la cible, pas a comparer. Chaque voisin pointe
+vers une cellule differente, donc ces valeurs sont uniques par ligne.
